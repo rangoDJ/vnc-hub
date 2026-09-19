@@ -178,9 +178,10 @@ class RDPManager:
                 args.append(f"/size:{resolution}")
             args.append("/f") # Fullscreen mode inside virtual display
 
-            # Advanced graphics & network optimizations
+            # Graphics pipeline with FreeRDP's best available codec. AVC444/AVC420 values are only
+            # accepted by builds with H.264 (Ubuntu's freerdp3 has none) and fail argument parsing.
             args.extend([
-                "/gfx:avc444",
+                "/gfx",
                 "/network:auto",
                 "+auto-reconnect",
                 "/auto-reconnect-max-retries:10"
