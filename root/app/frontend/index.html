@@ -240,9 +240,15 @@
                 <span id="progress-text">Uploading...</span>
             </div>
 
+            <div id="file-alert" class="alert-box hidden"></div>
+
             <div class="drawer-section-title">
-                <span>Files in Shared Drive</span>
-                <button id="btn-refresh-files" class="btn btn-xs btn-ghost" title="Refresh file list">↻ Refresh</button>
+                <span id="file-breadcrumb" class="file-breadcrumb">SharedFolder</span>
+                <div>
+                    <button id="btn-files-up" class="btn btn-xs btn-ghost" title="Up one folder" disabled>↑ Up</button>
+                    <button id="btn-new-folder" class="btn btn-xs btn-ghost" title="Create folder">＋ Folder</button>
+                    <button id="btn-refresh-files" class="btn btn-xs btn-ghost" title="Refresh file list">↻ Refresh</button>
+                </div>
             </div>
 
             <div id="file-list-table" class="file-list-container">
@@ -266,9 +272,10 @@
                 <textarea id="clip-text" rows="8" placeholder="Paste text here..."></textarea>
             </div>
             <div class="form-actions">
-                <button id="btn-clip-send" class="btn btn-primary">Copy to Local & Remote</button>
+                <button id="btn-clip-send" class="btn btn-primary">Send to Windows Clipboard</button>
                 <button id="btn-clip-clear" class="btn btn-ghost">Clear</button>
             </div>
+            <div id="clip-status" class="alert-box alert-success hidden"></div>
         </div>
     </div>
 

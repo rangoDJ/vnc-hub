@@ -9,7 +9,8 @@ services:
     shm_size: "2gb" # Crucial for high-resolution 60fps streaming buffers
 
     ports:
-      - "8080:3000" # Access WebUI & Selkies stream at http://<host-ip>:8080
+      - "8080:3000" # HTTP:  http://<host-ip>:8080
+      - "8443:3001" # HTTPS (self-signed): https://<host-ip>:8443 — needed for browser clipboard access
 
     environment:
       - PUID=1000
@@ -24,9 +25,9 @@ services:
       # Options: none, basic, oidc, forward_auth
       - AUTH_MODE=${AUTH_MODE:-none}
 
-      # Basic Auth settings (used when AUTH_MODE=basic)
+      # Basic Auth settings (used when AUTH_MODE=basic). Logins are rejected until a password is set.
       - BASIC_AUTH_USER=${BASIC_AUTH_USER:-admin}
-      - BASIC_AUTH_PASSWORD=${BASIC_AUTH_PASSWORD:-password123}
+      - BASIC_AUTH_PASSWORD=${BASIC_AUTH_PASSWORD:-}
 
       # Authentik / OIDC SSO settings (used when AUTH_MODE=oidc)
       - OIDC_ISSUER_URL=${OIDC_ISSUER_URL:-}
@@ -34,12 +35,26 @@ services:
       - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
       - OIDC_REDIRECT_URI=${OIDC_REDIRECT_URI:-http://localhost:8080/auth/callback}
       - OIDC_SCOPES=openid email profile
+      - OIDC_VERIFY_SSL=${OIDC_VERIFY_SSL:-true}
 
       # Forward Auth / Authentik Outpost settings (used when AUTH_MODE=forward_auth)
       - FORWARD_AUTH_HEADER=${FORWARD_AUTH_HEADER:-X-authentik-username}
+      # Required: IPs/CIDRs of your reverse proxy, e.g. 172.18.0.0/16. Other sources cannot set the header.
+      - FORWARD_AUTH_TRUSTED_PROXIES=${FORWARD_AUTH_TRUSTED_PROXIES:-}
+
+      # Session cookie Secure flag: auto (follows https), true, false
+      - COOKIE_SECURE=${COOKIE_SECURE:-auto}
 
       # Optional custom session secret key (auto-generated if omitted)
       - SECRET_KEY=${SECRET_KEY:-}
+
+      # --- GPU: AMD or Intel (VA-API) — uncomment together with the devices block below ---
+      # - DRINODE=/dev/dri/renderD128
+      # - DRI_NODE=/dev/dri/renderD128
+
+      # --- GPU: NVIDIA (NVENC) — uncomment together with the deploy block below ---
+      # - NVIDIA_VISIBLE_DEVICES=all
+      # - NVIDIA_DRIVER_CAPABILITIES=all
 
     volumes:
       # Persistent storage for saved connection profiles and session secrets
@@ -48,17 +63,14 @@ services:
       - ./shared:/shared
 
     # ================= GPU ACCELERATION PROFILES =================
+    # Keep the matching environment lines above uncommented too.
+    # Do not add a second "environment:" key — YAML would silently discard the one above.
 
     # --- Profile 1: AMD or Intel GPU (VA-API) ---
-    # Uncomment the lines below to enable AMD Radeon or Intel Iris/Arc/UHD hardware encoding:
     # devices:
     #   - /dev/dri:/dev/dri
-    # environment:
-    #   - DRINODE=/dev/dri/renderD128
-    #   - DRI_NODE=/dev/dri/renderD128
 
-    # --- Profile 2: NVIDIA GPU (NVENC) ---
-    # Uncomment the block below if using NVIDIA GPU with nvidia-container-toolkit:
+    # --- Profile 2: NVIDIA GPU (NVENC) with nvidia-container-toolkit ---
     # deploy:
     #   resources:
     #     reservations:
@@ -66,6 +78,3 @@ services:
     #         - driver: nvidia
     #           count: all
     #           capabilities: [gpu]
-    # environment:
-    #   - NVIDIA_VISIBLE_DEVICES=all
-    #   - NVIDIA_DRIVER_CAPABILITIES=all

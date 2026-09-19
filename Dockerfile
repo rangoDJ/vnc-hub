@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     feh \
     xdotool \
+    xclip \
     && rm -rf /var/lib/apt/lists/*
 
 # Create virtual environment for Python FastAPI WebUI & API
@@ -54,5 +55,5 @@ RUN chmod +x \
 # Volumes
 VOLUME ["/config", "/shared"]
 
-# Port 3000 is the unified web portal (WebUI, API, and Selkies WebRTC Stream)
-EXPOSE 3000
+# Port 3000 (HTTP) and 3001 (HTTPS, self-signed) serve the WebUI, API, and Selkies stream
+EXPOSE 3000 3001

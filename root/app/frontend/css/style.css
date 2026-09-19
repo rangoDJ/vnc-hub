@@ -584,6 +584,25 @@ input:focus, select:focus, textarea:focus {
     gap: 0.5rem;
 }
 
+.file-item-folder {
+    cursor: pointer;
+}
+
+.file-item-folder:hover strong {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+.file-breadcrumb {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#stream-view:fullscreen .stream-container {
+    height: 100vh;
+}
+
 /* Login Page Styling */
 .login-body {
     display: flex;

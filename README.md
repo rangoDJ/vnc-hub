@@ -104,6 +104,7 @@ docker compose up -d --build
 Access the WebUI at:
 ```
 http://<your-server-ip>:8080
+https://<your-server-ip>:8443   (self-signed; required for browser clipboard access)
 ```
 
 ---
@@ -117,18 +118,15 @@ No extra configuration required! The default `docker-compose.yml` runs anywhere 
 
 ### Profile B: AMD Radeon or Intel Iris/Arc/UHD (VA-API)
 1. Ensure the user running Docker is in the `video` and `render` groups.
-2. In `docker-compose.yml`, uncomment the VA-API block:
+2. In `docker-compose.yml`, uncomment the `devices:` block and the `DRINODE` / `DRI_NODE` lines inside the existing `environment:` list (don't add a second `environment:` key — YAML would discard the first one):
 ```yaml
 devices:
   - /dev/dri:/dev/dri
-environment:
-  - DRINODE=/dev/dri/renderD128
-  - DRI_NODE=/dev/dri/renderD128
 ```
 
 ### Profile C: NVIDIA GPU (NVENC)
 1. Install [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) on the host.
-2. In `docker-compose.yml`, uncomment the NVIDIA block:
+2. In `docker-compose.yml`, uncomment the `deploy:` block and the `NVIDIA_*` lines inside the existing `environment:` list:
 ```yaml
 deploy:
   resources:
@@ -137,9 +135,6 @@ deploy:
         - driver: nvidia
           count: all
           capabilities: [gpu]
-environment:
-  - NVIDIA_VISIBLE_DEVICES=all
-  - NVIDIA_DRIVER_CAPABILITIES=all
 ```
 
 ---
@@ -161,6 +156,7 @@ AUTH_MODE=basic
 BASIC_AUTH_USER=admin
 BASIC_AUTH_PASSWORD=YourSecurePasswordHere!
 ```
+There is no default password: logins are rejected until `BASIC_AUTH_PASSWORD` is set. After 10 failed attempts an IP is locked out for 15 minutes.
 
 ### Mode 3: Authentik Single Sign-On (OIDC)
 Direct integration with Authentik via OpenID Connect:
@@ -189,8 +185,11 @@ If you place this container behind an Authentik Embedded/Proxy Outpost, Traefik 
 ```ini
 AUTH_MODE=forward_auth
 FORWARD_AUTH_HEADER=X-authentik-username
+FORWARD_AUTH_TRUSTED_PROXIES=172.18.0.0/16
 ```
 The application will automatically recognize the authenticated user and grant access without a secondary login prompt.
+
+`FORWARD_AUTH_TRUSTED_PROXIES` is **required**: the header is only honoured when the request comes from one of these IPs/CIDRs (your proxy's address or Docker network). Otherwise anyone reaching the container port directly could forge the header. Also avoid publishing the container port publicly in this mode.
 
 ---
 
