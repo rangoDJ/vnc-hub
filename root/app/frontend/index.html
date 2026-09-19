@@ -91,15 +91,31 @@
                             </div>
                         </div>
 
-                        <div class="form-group">
-                            <label for="resolution">Display Resolution</label>
-                            <select id="resolution">
-                                <option value="dynamic" selected>Dynamic Auto-Resize (Recommended)</option>
-                                <option value="1920x1080">1080p Full HD (1920x1080)</option>
-                                <option value="2560x1440">2K QHD (2560x1440)</option>
-                                <option value="3840x2160">4K Ultra HD (3840x2160)</option>
-                                <option value="1280x720">720p HD (1280x720)</option>
-                            </select>
+                        <div class="form-row">
+                            <div class="form-group flex-1">
+                                <label for="resolution">Display Resolution</label>
+                                <select id="resolution">
+                                    <option value="dynamic" selected>Dynamic Auto-Resize (Recommended)</option>
+                                    <option value="1920x1080">1080p Full HD (1920x1080)</option>
+                                    <option value="2560x1440">2K QHD (2560x1440)</option>
+                                    <option value="3840x2160">4K Ultra HD (3840x2160)</option>
+                                    <option value="1280x720">720p HD (1280x720)</option>
+                                </select>
+                            </div>
+                            <div class="form-group flex-1">
+                                <label for="scale">Display Scaling</label>
+                                <select id="scale">
+                                    <option value="auto" selected>Auto (match this screen)</option>
+                                    <option value="100">100%</option>
+                                    <option value="125">125%</option>
+                                    <option value="150">150%</option>
+                                    <option value="175">175%</option>
+                                    <option value="200">200%</option>
+                                    <option value="225">225%</option>
+                                    <option value="250">250%</option>
+                                    <option value="300">300%</option>
+                                </select>
+                            </div>
                         </div>
 
                         <!-- Feature Toggles -->

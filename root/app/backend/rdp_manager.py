@@ -178,6 +178,12 @@ class RDPManager:
                 args.append(f"/size:{resolution}")
             args.append("/f") # Fullscreen mode inside virtual display
 
+            # Windows display scaling (DPI); FreeRDP resends it on every dynamic resize
+            desktop_scale = int(config.get("desktop_scale") or 100)
+            if desktop_scale > 100:
+                device_scale = 100 if desktop_scale < 140 else 140 if desktop_scale < 180 else 180
+                args.extend([f"/scale-desktop:{min(desktop_scale, 500)}", f"/scale-device:{device_scale}"])
+
             # Graphics pipeline with FreeRDP's best available codec. AVC444/AVC420 values are only
             # accepted by builds with H.264 (Ubuntu's freerdp3 has none) and fail argument parsing.
             args.extend([

@@ -27,6 +27,7 @@ const usernameInput = document.getElementById("username");
 const passwordInput = document.getElementById("password");
 const domainInput = document.getElementById("domain");
 const resolutionSelect = document.getElementById("resolution");
+const scaleSelect = document.getElementById("scale");
 const enableAudioCheck = document.getElementById("enable-audio");
 const enableClipboardCheck = document.getElementById("enable-clipboard");
 const enableDriveCheck = document.getElementById("enable-drive");
@@ -227,6 +228,7 @@ function getFormConfig() {
         password: passwordInput.value,
         domain: domainInput.value.trim(),
         resolution: resolutionSelect.value,
+        scale: scaleSelect.value,
         enable_audio: enableAudioCheck.checked,
         enable_clipboard: enableClipboardCheck.checked,
         enable_drive: enableDriveCheck.checked,
@@ -247,6 +249,8 @@ async function handleConnect(profileId = null) {
         }
         body = { custom: custom };
     }
+    // Lets the server match Windows display scaling to this screen when the profile uses "auto"
+    body.device_pixel_ratio = window.devicePixelRatio || 1;
 
     try {
         const res = await apiFetch("/api/session/connect", {
@@ -373,7 +377,7 @@ function renderProfiles() {
         <div class="profile-card" data-id="${escapeHtml(p.id)}">
             <div class="profile-info">
                 <h4>${escapeHtml(p.name || p.host)}</h4>
-                <p>${escapeHtml(p.username ? p.username + '@' : '')}${escapeHtml(p.host)}:${escapeHtml(p.port || 3389)} (${escapeHtml(p.resolution)})</p>
+                <p>${escapeHtml(p.username ? p.username + '@' : '')}${escapeHtml(p.host)}:${escapeHtml(p.port || 3389)} (${escapeHtml(p.resolution)}, ${p.scale && p.scale !== "auto" ? escapeHtml(p.scale) + "%" : "auto"} scaling)</p>
             </div>
             <div class="profile-actions">
                 <button class="btn btn-primary btn-sm btn-prof-connect" data-id="${escapeHtml(p.id)}">Connect</button>
@@ -436,6 +440,7 @@ function editProfile(profileId) {
     passwordInput.value = p.password || "";
     domainInput.value = p.domain || "";
     resolutionSelect.value = p.resolution || "dynamic";
+    scaleSelect.value = p.scale || "auto";
     enableAudioCheck.checked = p.enable_audio !== false;
     enableClipboardCheck.checked = p.enable_clipboard !== false;
     enableDriveCheck.checked = p.enable_drive !== false;

@@ -63,6 +63,8 @@ class RDPProfile(BaseModel):
     password: Optional[str] = Field(default="", max_length=512, pattern=SINGLE_LINE)
     domain: Optional[str] = Field(default="", max_length=256, pattern=SINGLE_LINE)
     resolution: str = Field(default="dynamic", pattern=r"^(dynamic|\d{3,5}x\d{3,5})$")
+    # Windows display scaling: "auto" follows the browser's devicePixelRatio, or a fixed percentage
+    scale: str = Field(default="auto", pattern=r"^(auto|100|125|150|175|200|225|250|300)$")
     enable_audio: bool = True
     enable_clipboard: bool = True
     enable_drive: bool = True
@@ -71,6 +73,8 @@ class RDPProfile(BaseModel):
 class ConnectRequest(BaseModel):
     profile_id: Optional[str] = None
     custom: Optional[RDPProfile] = None
+    # window.devicePixelRatio of the viewing browser, used when the profile's scale is "auto"
+    device_pixel_ratio: Optional[float] = Field(default=None, ge=0.5, le=5)
 
 class KeyActionRequest(BaseModel):
     key: str # "ctrl_alt_del", "super", "alt_tab"
@@ -108,6 +112,16 @@ def save_profiles(profiles: List[Dict[str, Any]]):
         json.dump(profiles, f, indent=2)
     os.replace(tmp, PROFILES_FILE)
     os.chmod(PROFILES_FILE, 0o600)
+
+def resolve_desktop_scale(scale: Optional[str], device_pixel_ratio: Optional[float]) -> int:
+    """Windows desktop scale percentage (100-500) for a profile's scale setting."""
+    if scale and scale != "auto":
+        return int(scale)
+    if not device_pixel_ratio:
+        return 100
+    # Selkies streams at the browser's physical pixel density, so match Windows scaling to it
+    percent = round(device_pixel_ratio * 100 / 25) * 25
+    return max(100, min(500, percent))
 
 def find_profile(profiles: List[Dict[str, Any]], profile_id: Optional[str]) -> Optional[Dict[str, Any]]:
     if not profile_id:
@@ -294,6 +308,9 @@ def connect_session(req: ConnectRequest, user: dict = Depends(get_current_user))
             config_dict["password"] = stored.get("password", "") if stored else ""
     else:
         raise HTTPException(status_code=400, detail="Missing connection parameters")
+
+    config_dict = dict(config_dict)
+    config_dict["desktop_scale"] = resolve_desktop_scale(config_dict.get("scale"), req.device_pixel_ratio)
 
     logger.info("User %s starting RDP session to %s", user.get("username"), config_dict.get("host"))
     result = rdp_manager.connect(config_dict)
