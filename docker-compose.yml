@@ -1,9 +1,11 @@
 services:
   selkies-rdp:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: selkies-rdp-webui:latest
+    # Prebuilt image published by .github/workflows/docker-publish.yml
+    image: ghcr.io/rangodj/vnc-hub:latest
+    # To build locally instead, replace the image line above with:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
     container_name: selkies-rdp
     restart: unless-stopped
     shm_size: "2gb" # Crucial for high-resolution 60fps streaming buffers

@@ -92,13 +92,16 @@ flowchart TD
 
 ### 1. Clone & Prepare
 ```bash
-cd selkies-vnc
+git clone https://github.com/rangoDJ/vnc-hub.git
+cd vnc-hub
 cp .env.example .env
 ```
 
 ### 2. Launch the Container
+The image `ghcr.io/rangodj/vnc-hub:latest` (linux/amd64 + linux/arm64) is built by GitHub Actions on every push to `main`. Tags `sha-<commit>` and, for `vX.Y.Z` git tags, `X.Y.Z` / `X.Y` are also published.
 ```bash
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
 
 Access the WebUI at:
