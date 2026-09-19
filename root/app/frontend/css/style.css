@@ -197,7 +197,8 @@ body {
 
 .dashboard-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    /* minmax(0, …) lets columns shrink below their content, so long log lines can't widen the page */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 1.5rem;
     max-width: 1300px;
     width: 100%;
@@ -207,7 +208,7 @@ body {
 
 @media (max-width: 960px) {
     .dashboard-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 
@@ -336,6 +337,7 @@ input:focus, select:focus, textarea:focus {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+    min-width: 0;
 }
 
 .profiles-list {
@@ -360,6 +362,15 @@ input:focus, select:focus, textarea:focus {
 .profile-card:hover {
     border-color: var(--accent);
     transform: translateY(-1px);
+}
+
+.profile-info {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.profile-actions {
+    flex-shrink: 0;
 }
 
 .profile-info h4 {
@@ -396,6 +407,13 @@ input:focus, select:focus, textarea:focus {
     font-family: monospace;
     font-size: 0.8rem;
     color: #a5b4fc;
+}
+
+/* FreeRDP log lines are very long; wrap them inside the card instead of widening it */
+#logs-content {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
 
 /* Stream View & Floating Toolbar */
