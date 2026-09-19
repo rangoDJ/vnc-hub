@@ -66,6 +66,9 @@ const tbBtnAltTab = document.getElementById("tb-btn-alt-tab");
 const tbBtnFiles = document.getElementById("tb-btn-files");
 const tbBtnClipboard = document.getElementById("tb-btn-clipboard");
 const tbBtnFullscreen = document.getElementById("tb-btn-fullscreen");
+const tbBtnCollapse = document.getElementById("tb-btn-collapse");
+const toolbarExpand = document.getElementById("toolbar-expand");
+const TOOLBAR_COLLAPSED_KEY = "vnchub.toolbarCollapsed";
 
 // Initialize Application
 async function initApp() {
@@ -155,6 +158,9 @@ function setupEventListeners() {
     });
     tbBtnClipboard.addEventListener("click", () => openDrawer(clipboardDrawer));
     tbBtnFullscreen.addEventListener("click", toggleFullscreen);
+    tbBtnCollapse.addEventListener("click", () => setToolbarCollapsed(true));
+    toolbarExpand.addEventListener("click", () => setToolbarCollapsed(false));
+    setToolbarCollapsed(loadToolbarCollapsed());
     setupToolbarDrag();
 
     // Logs accordion toggle
@@ -519,6 +525,24 @@ function toggleFullscreen() {
         });
     } else {
         document.exitFullscreen();
+    }
+}
+
+function loadToolbarCollapsed() {
+    try {
+        return localStorage.getItem(TOOLBAR_COLLAPSED_KEY) === "1";
+    } catch (e) {
+        return false; // storage unavailable (private mode, blocked site data)
+    }
+}
+
+function setToolbarCollapsed(collapsed) {
+    streamToolbar.classList.toggle("hidden", collapsed);
+    toolbarExpand.classList.toggle("hidden", !collapsed);
+    try {
+        localStorage.setItem(TOOLBAR_COLLAPSED_KEY, collapsed ? "1" : "0");
+    } catch (e) {
+        // preference just won't persist
     }
 }
 
