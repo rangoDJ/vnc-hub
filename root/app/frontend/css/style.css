@@ -252,6 +252,90 @@ body {
     color: var(--danger);
 }
 
+.field-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+}
+
+.field-hint {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+#ssh-key {
+    font-family: ui-monospace, "DejaVu Sans Mono", Consolas, monospace;
+    font-size: 0.8rem;
+    resize: vertical;
+}
+
+/* Protocol picker */
+.segmented {
+    display: flex;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 3px;
+}
+
+.form-group .segmented label {
+    flex: 1;
+    margin: 0;
+    cursor: pointer;
+}
+
+.segmented input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.segmented span {
+    display: block;
+    text-align: center;
+    padding: 0.45rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    transition: background 0.15s, color 0.15s;
+}
+
+.segmented label:hover span {
+    color: var(--text-main);
+}
+
+.segmented input:checked + span {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+}
+
+.segmented input:focus-visible + span {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 1px;
+}
+
+.protocol-tag {
+    display: inline-block;
+    margin-right: 0.4rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    vertical-align: middle;
+    background: rgba(59, 130, 246, 0.15);
+    color: #93c5fd;
+}
+
+.protocol-tag.vnc { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; }
+.protocol-tag.ssh { background: rgba(245, 158, 11, 0.15); color: #fcd34d; }
+
 .form-row {
     display: flex;
     gap: 1rem;

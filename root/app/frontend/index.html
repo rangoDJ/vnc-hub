@@ -59,41 +59,72 @@
                         <input type="hidden" id="profile-id">
 
                         <div class="form-group">
+                            <span class="field-label" id="protocol-label">Protocol</span>
+                            <div class="segmented" role="radiogroup" aria-labelledby="protocol-label">
+                                <label><input type="radio" name="protocol" value="rdp" checked><span>🪟 RDP</span></label>
+                                <label><input type="radio" name="protocol" value="vnc"><span>🖥️ VNC</span></label>
+                                <label><input type="radio" name="protocol" value="ssh"><span>⌨️ SSH</span></label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
                             <label for="profile-name">Profile Name (Optional)</label>
-                            <input type="text" id="profile-name" placeholder="e.g. My Windows Workstation">
+                            <input type="text" id="profile-name" placeholder="e.g. Windows Workstation, Home Server">
                         </div>
 
                         <div class="form-row">
                             <div class="form-group flex-2">
-                                <label for="host">Windows Host / IP <span class="required">*</span></label>
+                                <label for="host">Host / IP <span class="required">*</span></label>
                                 <input type="text" id="host" required placeholder="192.168.1.150 or pc.local">
                             </div>
                             <div class="form-group flex-1">
                                 <label for="port">Port</label>
-                                <input type="number" id="port" value="3389" placeholder="3389">
+                                <input type="number" id="port" min="1" max="65535" placeholder="3389">
                             </div>
                         </div>
 
-                        <div class="form-row">
+                        <div class="form-row" data-for="rdp ssh">
                             <div class="form-group flex-1">
                                 <label for="username">Username</label>
                                 <input type="text" id="username" placeholder="Administrator">
                             </div>
-                            <div class="form-group flex-1">
+                            <div class="form-group flex-1" data-for="rdp">
                                 <label for="domain">Domain (Optional)</label>
                                 <input type="text" id="domain" placeholder="CORP">
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label for="password">Password</label>
+                            <label for="password" id="password-label">Password</label>
                             <div class="password-wrap">
-                                <input type="password" id="password" placeholder="••••••••">
+                                <input type="password" id="password" placeholder="••••••••" autocomplete="new-password">
                                 <button type="button" id="btn-toggle-password" class="btn-eye" title="Toggle visibility">👁️</button>
                             </div>
+                            <small class="field-hint" data-for="ssh">Optional. Leave empty to use a private key or to type the password in the terminal.</small>
                         </div>
 
-                        <div class="form-row">
+                        <!-- SSH -->
+                        <div class="form-group" data-for="ssh">
+                            <label for="ssh-key">Private Key (Optional)</label>
+                            <textarea id="ssh-key" rows="4" spellcheck="false" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"></textarea>
+                            <small class="field-hint">Stored with the profile like the password. Passphrase-protected keys prompt in the terminal.</small>
+                        </div>
+
+                        <div class="form-group" data-for="ssh">
+                            <label for="font-size">Terminal Font Size</label>
+                            <select id="font-size">
+                                <option value="10">10</option>
+                                <option value="12" selected>12 (Default)</option>
+                                <option value="14">14</option>
+                                <option value="16">16</option>
+                                <option value="18">18</option>
+                                <option value="20">20</option>
+                                <option value="24">24</option>
+                            </select>
+                        </div>
+
+                        <!-- RDP -->
+                        <div class="form-row" data-for="rdp">
                             <div class="form-group flex-1">
                                 <label for="resolution">Display Resolution</label>
                                 <select id="resolution">
@@ -120,8 +151,7 @@
                             </div>
                         </div>
 
-                        <!-- Feature Toggles -->
-                        <div class="toggles-grid">
+                        <div class="toggles-grid" data-for="rdp">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="enable-audio" checked>
                                 <span class="checkbox-custom"></span>
@@ -144,12 +174,21 @@
                             </label>
                         </div>
 
+                        <!-- VNC -->
+                        <div class="toggles-grid" data-for="vnc">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="view-only">
+                                <span class="checkbox-custom"></span>
+                                <span>👁️ View Only (Shared)</span>
+                            </label>
+                        </div>
+
                         <div id="connection-alert" class="alert-box hidden"></div>
 
                         <div class="form-actions">
                             <button type="submit" id="btn-connect" class="btn btn-primary btn-lg">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                                Connect to Windows
+                                Connect
                             </button>
                             <button type="button" id="btn-save-profile" class="btn btn-secondary">
                                 Save Profile
@@ -199,9 +238,9 @@
                     </button>
                 </div>
 
-                <div class="toolbar-separator"></div>
+                <div class="toolbar-separator" data-keys-group></div>
 
-                <div class="toolbar-group">
+                <div class="toolbar-group" data-keys-group>
                     <button id="tb-btn-cad" class="btn btn-tool btn-sm" title="Send Ctrl+Alt+Del">
                         Ctrl+Alt+Del
                     </button>
@@ -287,17 +326,17 @@
         <div class="drawer-header">
             <div>
                 <h3>📋 Clipboard Helper</h3>
-                <p class="drawer-subtitle">Direct clipboard sync for remote Windows session</p>
+                <p class="drawer-subtitle">Send text to the remote session's clipboard</p>
             </div>
             <button id="btn-close-clipboard" class="btn-close">&times;</button>
         </div>
         <div class="drawer-body">
             <div class="form-group">
-                <label for="clip-text">Paste or type text to send to Windows clipboard:</label>
+                <label for="clip-text">Paste or type text to send to the remote clipboard:</label>
                 <textarea id="clip-text" rows="8" placeholder="Paste text here..."></textarea>
             </div>
             <div class="form-actions">
-                <button id="btn-clip-send" class="btn btn-primary">Send to Windows Clipboard</button>
+                <button id="btn-clip-send" class="btn btn-primary">Send to Remote Clipboard</button>
                 <button id="btn-clip-clear" class="btn btn-ghost">Clear</button>
             </div>
             <div id="clip-status" class="alert-box alert-success hidden"></div>

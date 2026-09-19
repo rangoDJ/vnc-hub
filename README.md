@@ -196,6 +196,20 @@ The application will automatically recognize the authenticated user and grant ac
 
 ---
 
+## Connection Types (RDP, VNC, SSH)
+
+Pick the protocol at the top of the connection form. Each session runs fullscreen inside the container's display and is streamed to your browser the same way.
+
+| Protocol | Client | Default port | Notes |
+|---|---|---|---|
+| **RDP** | FreeRDP 3 | 3389 | Audio, clipboard, shared folder drive, auto display scaling. |
+| **VNC** | TigerVNC viewer | 5900 | VNC password only (no username). Optional view-only mode. The remote desktop follows the window size if the server supports it (e.g. TigerVNC/x11vnc); otherwise it keeps its own size. |
+| **SSH** | `ssh` in an xterm | 22 | Password (via `sshpass`), private key, or type the password in the terminal. Host keys are trusted on first use and stored in `/config/.ssh/known_hosts`; a changed key is refused. Selecting text copies it to the clipboard. |
+
+Passwords and SSH keys are stored in `/config/profiles.json` (readable only by the container user) and are never passed on a command line. SSH keys and VNC password files are written to a private temporary directory for the length of the session and deleted afterwards.
+
+---
+
 ## How File Sharing Works
 
 File sharing between your client browser and the remote Windows machine is bidirectional and automatic:

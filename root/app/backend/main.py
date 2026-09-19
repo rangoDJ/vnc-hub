@@ -32,7 +32,7 @@ from auth import (
     verify_state_cookie,
     clear_state_cookie
 )
-from rdp_manager import rdp_manager
+from session_manager import session_manager
 from file_manager import (
     list_files,
     save_uploaded_file,
@@ -53,14 +53,21 @@ FRONTEND_DIR = Path(os.environ.get("FRONTEND_DIR", "/app/frontend"))
 PASSWORD_MASK = "••••••••"
 SINGLE_LINE = r"^[^\r\n]*$"
 
+# Profile fields that hold secrets: masked when listed, kept when the mask is sent back
+SECRET_FIELDS = ("password", "ssh_key")
+
 # Pydantic models
-class RDPProfile(BaseModel):
+class ConnectionProfile(BaseModel):
     id: Optional[str] = Field(default=None, pattern=r"^[0-9a-fA-F-]{36}$")
+    protocol: str = Field(default="rdp", pattern=r"^(rdp|vnc|ssh)$")
     name: str = Field(default="", max_length=100, pattern=SINGLE_LINE)
-    host: str = Field(min_length=1, max_length=253, pattern=r"^[A-Za-z0-9._:\[\]-]+$")
-    port: int = Field(default=3389, ge=1, le=65535)
+    # Must not start with "-", so a host can never be parsed as a client option
+    host: str = Field(min_length=1, max_length=253, pattern=r"^[A-Za-z0-9\[][A-Za-z0-9._:\[\]-]*$")
+    # None means the protocol's default port (3389 / 5900 / 22)
+    port: Optional[int] = Field(default=None, ge=1, le=65535)
     username: Optional[str] = Field(default="", max_length=256, pattern=SINGLE_LINE)
     password: Optional[str] = Field(default="", max_length=512, pattern=SINGLE_LINE)
+    # RDP
     domain: Optional[str] = Field(default="", max_length=256, pattern=SINGLE_LINE)
     resolution: str = Field(default="dynamic", pattern=r"^(dynamic|\d{3,5}x\d{3,5})$")
     # Windows display scaling: "auto" follows the browser's devicePixelRatio, or a fixed percentage
@@ -69,10 +76,15 @@ class RDPProfile(BaseModel):
     enable_clipboard: bool = True
     enable_drive: bool = True
     ignore_cert: bool = True
+    # VNC
+    view_only: bool = False
+    # SSH
+    ssh_key: Optional[str] = Field(default="", max_length=16384)
+    font_size: int = Field(default=12, ge=6, le=48)
 
 class ConnectRequest(BaseModel):
     profile_id: Optional[str] = None
-    custom: Optional[RDPProfile] = None
+    custom: Optional[ConnectionProfile] = None
     # window.devicePixelRatio of the viewing browser, used when the profile's scale is "auto"
     device_pixel_ratio: Optional[float] = Field(default=None, ge=0.5, le=5)
 
@@ -255,26 +267,32 @@ async def auth_verify(request: Request):
 @app.get("/api/profiles")
 def get_profiles(user: dict = Depends(get_current_user)):
     profiles = load_profiles()
-    # Mask passwords when returning profiles list
+    # Mask secrets when returning profiles list
     masked = []
     for p in profiles:
         cp = p.copy()
-        if cp.get("password"):
-            cp["has_password"] = True
-            cp["password"] = PASSWORD_MASK
-        else:
-            cp["has_password"] = False
+        cp.setdefault("protocol", "rdp") # profiles saved before multi-protocol support
+        for secret in SECRET_FIELDS:
+            cp[f"has_{secret}"] = bool(cp.get(secret))
+            if cp.get(secret):
+                cp[secret] = PASSWORD_MASK
         masked.append(cp)
     return masked
 
+def restore_masked_secrets(data: Dict[str, Any], stored: Optional[Dict[str, Any]]):
+    """Swap masked placeholders sent back by the UI for the stored secret values."""
+    for secret in SECRET_FIELDS:
+        if data.get(secret) == PASSWORD_MASK:
+            data[secret] = stored.get(secret, "") if stored else ""
+
 @app.post("/api/profiles")
-def save_profile(profile: RDPProfile, user: dict = Depends(get_current_user)):
+def save_profile(profile: ConnectionProfile, user: dict = Depends(get_current_user)):
     with _profiles_lock:
         profiles = load_profiles()
         existing = find_profile(profiles, profile.id)
-        if profile.password == PASSWORD_MASK:
-            # Retain the stored password when the masked placeholder is sent back
-            profile.password = existing.get("password", "") if existing else ""
+        for secret in SECRET_FIELDS:
+            if getattr(profile, secret) == PASSWORD_MASK:
+                setattr(profile, secret, existing.get(secret, "") if existing else "")
         if not profile.id:
             profile.id = str(uuid.uuid4())
         data = profile.model_dump()
@@ -292,7 +310,7 @@ def remove_profile(profile_id: str, user: dict = Depends(get_current_user)):
         save_profiles(profiles)
     return {"success": True}
 
-# ----------------- RDP Session Control API -----------------
+# ----------------- Session Control API -----------------
 
 @app.post("/api/session/connect")
 def connect_session(req: ConnectRequest, user: dict = Depends(get_current_user)):
@@ -302,40 +320,41 @@ def connect_session(req: ConnectRequest, user: dict = Depends(get_current_user))
             raise HTTPException(status_code=404, detail="Profile not found")
     elif req.custom:
         config_dict = req.custom.model_dump()
-        if config_dict.get("password") == PASSWORD_MASK:
-            # Form was loaded from a saved profile and the password left untouched
-            stored = find_profile(load_profiles(), req.custom.id)
-            config_dict["password"] = stored.get("password", "") if stored else ""
+        # Form was loaded from a saved profile and its secrets left untouched
+        if any(config_dict.get(s) == PASSWORD_MASK for s in SECRET_FIELDS):
+            restore_masked_secrets(config_dict, find_profile(load_profiles(), req.custom.id))
     else:
         raise HTTPException(status_code=400, detail="Missing connection parameters")
 
     config_dict = dict(config_dict)
+    config_dict.setdefault("protocol", "rdp")
     config_dict["desktop_scale"] = resolve_desktop_scale(config_dict.get("scale"), req.device_pixel_ratio)
 
-    logger.info("User %s starting RDP session to %s", user.get("username"), config_dict.get("host"))
-    result = rdp_manager.connect(config_dict)
+    logger.info("User %s starting %s session to %s", user.get("username"),
+                config_dict["protocol"].upper(), config_dict.get("host"))
+    result = session_manager.connect(config_dict)
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["message"])
     return result
 
 @app.post("/api/session/disconnect")
 def disconnect_session(user: dict = Depends(get_current_user)):
-    return rdp_manager.disconnect()
+    return session_manager.disconnect()
 
 @app.get("/api/session/status")
 def session_status(user: dict = Depends(get_current_user)):
-    return rdp_manager.get_status()
+    return session_manager.get_status()
 
 @app.post("/api/session/send-keys")
 def session_send_keys(req: KeyActionRequest, user: dict = Depends(get_current_user)):
-    result = rdp_manager.send_keys(req.key)
+    result = session_manager.send_keys(req.key)
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["message"])
     return result
 
 @app.post("/api/session/clipboard")
 def session_clipboard(req: ClipboardRequest, user: dict = Depends(get_current_user)):
-    result = rdp_manager.set_clipboard(req.text)
+    result = session_manager.set_clipboard(req.text)
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["message"])
     return result

@@ -32,6 +32,17 @@ const enableAudioCheck = document.getElementById("enable-audio");
 const enableClipboardCheck = document.getElementById("enable-clipboard");
 const enableDriveCheck = document.getElementById("enable-drive");
 const ignoreCertCheck = document.getElementById("ignore-cert");
+const viewOnlyCheck = document.getElementById("view-only");
+const sshKeyInput = document.getElementById("ssh-key");
+const fontSizeSelect = document.getElementById("font-size");
+const passwordLabel = document.getElementById("password-label");
+
+const DEFAULT_PORTS = { rdp: 3389, vnc: 5900, ssh: 22 };
+const PROTOCOL_UI = {
+    rdp: { password: "Password", username: "Administrator", host: "192.168.1.150 or pc.local" },
+    vnc: { password: "VNC Password", username: "", host: "192.168.1.50 or nas.local" },
+    ssh: { password: "Password", username: "root", host: "192.168.1.10 or server.local" },
+};
 const btnSaveProfile = document.getElementById("btn-save-profile");
 const btnResetForm = document.getElementById("btn-reset-form");
 const connectionAlert = document.getElementById("connection-alert");
@@ -121,6 +132,9 @@ async function checkAuth() {
 // Setup Event Listeners
 function setupEventListeners() {
     // Form submission (Connect)
+    document.querySelectorAll('input[name="protocol"]').forEach(r => r.addEventListener("change", onProtocolChange));
+    applyProtocol();
+
     rdpForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         await handleConnect();
@@ -228,12 +242,43 @@ function setupEventListeners() {
 
 // ----------------- Connection & Session Management -----------------
 
+function getProtocol() {
+    const checked = document.querySelector('input[name="protocol"]:checked');
+    return checked ? checked.value : "rdp";
+}
+
+function setProtocol(protocol) {
+    const radio = document.querySelector(`input[name="protocol"][value="${protocol}"]`);
+    if (radio) radio.checked = true;
+    applyProtocol();
+}
+
+// Show only the fields that apply to the selected protocol (elements tagged data-for="rdp ssh")
+function applyProtocol() {
+    const protocol = getProtocol();
+    document.querySelectorAll("#rdp-config-form [data-for]").forEach(el => {
+        el.classList.toggle("hidden", !el.dataset.for.split(" ").includes(protocol));
+    });
+    const ui = PROTOCOL_UI[protocol];
+    passwordLabel.textContent = ui.password;
+    usernameInput.placeholder = ui.username;
+    hostInput.placeholder = ui.host;
+    portInput.placeholder = DEFAULT_PORTS[protocol];
+}
+
+function onProtocolChange() {
+    // A port left at another protocol's default follows the switch; custom ports are kept
+    if (Object.values(DEFAULT_PORTS).includes(parseInt(portInput.value))) portInput.value = "";
+    applyProtocol();
+}
+
 function getFormConfig() {
     return {
         id: profileIdInput.value || null,
+        protocol: getProtocol(),
         name: profileNameInput.value.trim() || hostInput.value.trim(),
         host: hostInput.value.trim(),
-        port: parseInt(portInput.value) || 3389,
+        port: parseInt(portInput.value) || null, // null = protocol default
         username: usernameInput.value.trim(),
         password: passwordInput.value,
         domain: domainInput.value.trim(),
@@ -242,7 +287,10 @@ function getFormConfig() {
         enable_audio: enableAudioCheck.checked,
         enable_clipboard: enableClipboardCheck.checked,
         enable_drive: enableDriveCheck.checked,
-        ignore_cert: ignoreCertCheck.checked
+        ignore_cert: ignoreCertCheck.checked,
+        view_only: viewOnlyCheck.checked,
+        ssh_key: sshKeyInput.value,
+        font_size: parseInt(fontSizeSelect.value) || 12
     };
 }
 
@@ -320,7 +368,11 @@ async function pollStatus() {
         if (!res.ok) return;
         const data = await res.json();
         const previousStatus = currentStatus;
-        updateStatusBadge(data.status, data.target);
+        updateStatusBadge(data.status, data.target, data.protocol);
+        // Ctrl+Alt+Del / Win / Alt+Tab only make sense for graphical desktops
+        document.querySelectorAll("[data-keys-group]").forEach(el => {
+            el.classList.toggle("hidden", data.protocol === "ssh");
+        });
 
         // Update logs
         if (data.recent_logs && data.recent_logs.length > 0) {
@@ -344,7 +396,7 @@ async function pollStatus() {
     }
 }
 
-function updateStatusBadge(status, target) {
+function updateStatusBadge(status, target, protocol) {
     currentStatus = status;
     sessionBadge.className = "badge";
     badgeStatusText.textContent = status;
@@ -352,7 +404,7 @@ function updateStatusBadge(status, target) {
     if (status === "connected") {
         sessionBadge.classList.add("badge-connected");
         if (target) {
-            navTargetHost.textContent = target;
+            navTargetHost.textContent = protocol ? `${protocol.toUpperCase()} · ${target}` : target;
             navTargetHost.classList.remove("hidden");
         }
     } else if (status === "connecting") {
@@ -386,11 +438,13 @@ function renderProfiles() {
         return;
     }
 
-    profilesList.innerHTML = savedProfiles.map(p => `
+    profilesList.innerHTML = savedProfiles.map(p => {
+        const protocol = DEFAULT_PORTS[p.protocol] ? p.protocol : "rdp";
+        return `
         <div class="profile-card" data-id="${escapeHtml(p.id)}">
             <div class="profile-info">
-                <h4>${escapeHtml(p.name || p.host)}</h4>
-                <p>${escapeHtml(p.username ? p.username + '@' : '')}${escapeHtml(p.host)}:${escapeHtml(p.port || 3389)} (${escapeHtml(p.resolution)}, ${p.scale && p.scale !== "auto" ? escapeHtml(p.scale) + "%" : "auto"} scaling)</p>
+                <h4><span class="protocol-tag ${protocol}">${protocol.toUpperCase()}</span>${escapeHtml(p.name || p.host)}</h4>
+                <p>${escapeHtml(p.username ? p.username + '@' : '')}${escapeHtml(p.host)}:${escapeHtml(p.port || DEFAULT_PORTS[protocol])}${profileDetail(p, protocol)}</p>
             </div>
             <div class="profile-actions">
                 <button class="btn btn-primary btn-sm btn-prof-connect" data-id="${escapeHtml(p.id)}">Connect</button>
@@ -398,7 +452,8 @@ function renderProfiles() {
                 <button class="btn btn-danger btn-sm btn-prof-del" data-id="${escapeHtml(p.id)}">✕</button>
             </div>
         </div>
-    `).join("");
+    `;
+    }).join("");
 
     // Attach listeners to profile action buttons
     document.querySelectorAll(".btn-prof-connect").forEach(b => {
@@ -410,6 +465,16 @@ function renderProfiles() {
     document.querySelectorAll(".btn-prof-del").forEach(b => {
         b.addEventListener("click", () => deleteProfile(b.dataset.id));
     });
+}
+
+// Short protocol-specific summary shown under a saved profile
+function profileDetail(p, protocol) {
+    if (protocol === "rdp") {
+        const scale = p.scale && p.scale !== "auto" ? escapeHtml(p.scale) + "%" : "auto";
+        return ` (${escapeHtml(p.resolution || "dynamic")}, ${scale} scaling)`;
+    }
+    if (protocol === "vnc") return p.view_only ? " (view only)" : "";
+    return p.has_ssh_key ? " (key auth)" : "";
 }
 
 async function handleSaveProfile() {
@@ -445,10 +510,11 @@ function editProfile(profileId) {
     const p = savedProfiles.find(x => x.id === profileId);
     if (!p) return;
     hideAlert();
+    setProtocol(p.protocol || "rdp");
     profileIdInput.value = p.id;
     profileNameInput.value = p.name || "";
     hostInput.value = p.host;
-    portInput.value = p.port || 3389;
+    portInput.value = p.port || "";
     usernameInput.value = p.username || "";
     passwordInput.value = p.password || "";
     domainInput.value = p.domain || "";
@@ -458,6 +524,9 @@ function editProfile(profileId) {
     enableClipboardCheck.checked = p.enable_clipboard !== false;
     enableDriveCheck.checked = p.enable_drive !== false;
     ignoreCertCheck.checked = p.ignore_cert !== false;
+    viewOnlyCheck.checked = p.view_only === true;
+    sshKeyInput.value = p.ssh_key || "";
+    fontSizeSelect.value = String(p.font_size || 12);
 
     btnResetForm.classList.remove("hidden");
     document.getElementById("form-title").textContent = `Editing: ${p.name || p.host}`;
@@ -480,6 +549,7 @@ async function deleteProfile(profileId) {
 
 function resetForm() {
     rdpForm.reset();
+    applyProtocol(); // reset() puts the protocol back to RDP
     profileIdInput.value = "";
     btnResetForm.classList.add("hidden");
     document.getElementById("form-title").textContent = "Connection Configuration";

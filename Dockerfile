@@ -26,6 +26,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     feh \
     xdotool \
     xclip \
+    tigervnc-viewer \
+    tigervnc-tools \
+    openssh-client \
+    sshpass \
+    xterm \
+    fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 # Create virtual environment for Python FastAPI WebUI & API
