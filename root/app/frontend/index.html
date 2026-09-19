@@ -38,6 +38,8 @@
                 <span id="user-display-name" class="user-display-name">user</span>
                 <a href="/auth/logout" class="btn btn-sm btn-outline">Logout</a>
             </div>
+            <!-- Only shown in the stream view -->
+            <button id="btn-collapse-nav" class="btn btn-sm btn-ghost nav-collapse-btn" title="Hide top bar" aria-label="Hide top bar">▴</button>
         </div>
     </header>
 
@@ -304,6 +306,9 @@
 
     <!-- Backdrop Overlay -->
     <div id="drawer-backdrop" class="drawer-backdrop hidden"></div>
+
+    <!-- Tab shown in the stream view while the top bar is hidden -->
+    <button id="nav-expand" class="nav-expand" title="Show top bar" aria-label="Show top bar">▾</button>
 
     <script src="/js/app.js"></script>
 </body>

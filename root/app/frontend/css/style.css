@@ -458,6 +458,47 @@ input:focus, select:focus, textarea:focus {
     transition: opacity 0.3s;
 }
 
+/* Collapsible top bar: only while the stream view is showing (body.in-stream) */
+.nav-collapse-btn,
+.nav-expand {
+    display: none;
+}
+
+body.in-stream .nav-collapse-btn {
+    display: inline-flex;
+}
+
+body.in-stream.nav-collapsed .navbar {
+    display: none;
+}
+
+body.in-stream.nav-collapsed #stream-view {
+    top: 0;
+}
+
+body.in-stream.nav-collapsed .nav-expand {
+    display: block;
+    position: fixed;
+    top: 0;
+    right: 16px;
+    z-index: 60;
+    padding: 0.1rem 1rem 0.25rem;
+    background: rgba(15, 23, 42, 0.88);
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    color: var(--text-main);
+    font-size: 0.85rem;
+    cursor: pointer;
+    opacity: 0.55;
+    transition: opacity 0.15s;
+}
+
+body.in-stream.nav-collapsed .nav-expand:hover,
+body.in-stream.nav-collapsed .nav-expand:focus-visible {
+    opacity: 1;
+}
+
 .toolbar-expand {
     position: absolute;
     top: 0;

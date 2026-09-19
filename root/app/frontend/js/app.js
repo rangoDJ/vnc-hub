@@ -69,6 +69,7 @@ const tbBtnFullscreen = document.getElementById("tb-btn-fullscreen");
 const tbBtnCollapse = document.getElementById("tb-btn-collapse");
 const toolbarExpand = document.getElementById("toolbar-expand");
 const TOOLBAR_COLLAPSED_KEY = "vnchub.toolbarCollapsed";
+const NAV_COLLAPSED_KEY = "vnchub.navCollapsed";
 
 // Initialize Application
 async function initApp() {
@@ -160,7 +161,10 @@ function setupEventListeners() {
     tbBtnFullscreen.addEventListener("click", toggleFullscreen);
     tbBtnCollapse.addEventListener("click", () => setToolbarCollapsed(true));
     toolbarExpand.addEventListener("click", () => setToolbarCollapsed(false));
-    setToolbarCollapsed(loadToolbarCollapsed());
+    setToolbarCollapsed(loadPref(TOOLBAR_COLLAPSED_KEY));
+    document.getElementById("btn-collapse-nav").addEventListener("click", () => setNavCollapsed(true));
+    document.getElementById("nav-expand").addEventListener("click", () => setNavCollapsed(false));
+    setNavCollapsed(loadPref(NAV_COLLAPSED_KEY));
     setupToolbarDrag();
 
     // Logs accordion toggle
@@ -485,6 +489,7 @@ function resetForm() {
 
 function switchView(toStream) {
     isStreamView = toStream;
+    document.body.classList.toggle("in-stream", toStream);
     if (toStream) {
         dashboardView.classList.add("hidden");
         streamView.classList.remove("hidden");
@@ -528,22 +533,32 @@ function toggleFullscreen() {
     }
 }
 
-function loadToolbarCollapsed() {
+function loadPref(key) {
     try {
-        return localStorage.getItem(TOOLBAR_COLLAPSED_KEY) === "1";
+        return localStorage.getItem(key) === "1";
     } catch (e) {
         return false; // storage unavailable (private mode, blocked site data)
+    }
+}
+
+function savePref(key, value) {
+    try {
+        localStorage.setItem(key, value ? "1" : "0");
+    } catch (e) {
+        // preference just won't persist
     }
 }
 
 function setToolbarCollapsed(collapsed) {
     streamToolbar.classList.toggle("hidden", collapsed);
     toolbarExpand.classList.toggle("hidden", !collapsed);
-    try {
-        localStorage.setItem(TOOLBAR_COLLAPSED_KEY, collapsed ? "1" : "0");
-    } catch (e) {
-        // preference just won't persist
-    }
+    savePref(TOOLBAR_COLLAPSED_KEY, collapsed);
+}
+
+// The top bar only hides while the stream view is showing (see body.in-stream in the CSS)
+function setNavCollapsed(collapsed) {
+    document.body.classList.toggle("nav-collapsed", collapsed);
+    savePref(NAV_COLLAPSED_KEY, collapsed);
 }
 
 function setupToolbarDrag() {
