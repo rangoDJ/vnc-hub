@@ -1,0 +1,71 @@
+services:
+  selkies-rdp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: selkies-rdp-webui:latest
+    container_name: selkies-rdp
+    restart: unless-stopped
+    shm_size: "2gb" # Crucial for high-resolution 60fps streaming buffers
+
+    ports:
+      - "8080:3000" # Access WebUI & Selkies stream at http://<host-ip>:8080
+
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+
+      # ================= Encoding Configuration =================
+      # Options: h264enc (auto NVENC/VAAPI/CPU fallback), x264enc (CPU only), jpeg
+      - SELKIES_ENCODER=h264enc
+
+      # ================= Authentication Configuration =================
+      # Options: none, basic, oidc, forward_auth
+      - AUTH_MODE=${AUTH_MODE:-none}
+
+      # Basic Auth settings (used when AUTH_MODE=basic)
+      - BASIC_AUTH_USER=${BASIC_AUTH_USER:-admin}
+      - BASIC_AUTH_PASSWORD=${BASIC_AUTH_PASSWORD:-password123}
+
+      # Authentik / OIDC SSO settings (used when AUTH_MODE=oidc)
+      - OIDC_ISSUER_URL=${OIDC_ISSUER_URL:-}
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
+      - OIDC_REDIRECT_URI=${OIDC_REDIRECT_URI:-http://localhost:8080/auth/callback}
+      - OIDC_SCOPES=openid email profile
+
+      # Forward Auth / Authentik Outpost settings (used when AUTH_MODE=forward_auth)
+      - FORWARD_AUTH_HEADER=${FORWARD_AUTH_HEADER:-X-authentik-username}
+
+      # Optional custom session secret key (auto-generated if omitted)
+      - SECRET_KEY=${SECRET_KEY:-}
+
+    volumes:
+      # Persistent storage for saved connection profiles and session secrets
+      - ./config:/config
+      # Shared folder mounted as RDP drive in Windows (\\tsclient\SharedFolder)
+      - ./shared:/shared
+
+    # ================= GPU ACCELERATION PROFILES =================
+
+    # --- Profile 1: AMD or Intel GPU (VA-API) ---
+    # Uncomment the lines below to enable AMD Radeon or Intel Iris/Arc/UHD hardware encoding:
+    # devices:
+    #   - /dev/dri:/dev/dri
+    # environment:
+    #   - DRINODE=/dev/dri/renderD128
+    #   - DRI_NODE=/dev/dri/renderD128
+
+    # --- Profile 2: NVIDIA GPU (NVENC) ---
+    # Uncomment the block below if using NVIDIA GPU with nvidia-container-toolkit:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    # environment:
+    #   - NVIDIA_VISIBLE_DEVICES=all
+    #   - NVIDIA_DRIVER_CAPABILITIES=all

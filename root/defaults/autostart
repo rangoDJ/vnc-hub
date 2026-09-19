@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+# Autostart script executed inside the virtual X11 display session
+
+echo "[Selkies-RDP] Initializing desktop session..."
+
+# Set black background by default
+xsetroot -solid "#0b0f19" 2>/dev/null || true
+
+# Optional: if feh is available, display a sleek standby wallpaper
+if command -v feh >/dev/null 2>&1 && [ -f /app/splash.png ]; then
+    feh --bg-center /app/splash.png || true
+fi
+
+echo "[Selkies-RDP] Session ready for FreeRDP connections."

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selkies RDP Gateway</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
+        <div class="nav-left">
+            <div class="logo">
+                <span class="logo-icon">🪟⚡</span>
+                <span class="logo-text">Selkies <span class="accent">RDP</span></span>
+            </div>
+            <div id="session-badge" class="badge badge-idle">
+                <span class="badge-dot"></span>
+                <span id="badge-status-text">Disconnected</span>
+            </div>
+            <span id="nav-target-host" class="nav-target-host hidden"></span>
+        </div>
+
+        <div class="nav-right">
+            <button id="btn-toggle-view" class="btn btn-secondary hidden">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                <span id="toggle-view-text">Go to Stream</span>
+            </button>
+            <button id="btn-open-files" class="btn btn-secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                Shared Files
+            </button>
+            <button id="btn-open-clipboard" class="btn btn-secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+                Clipboard
+            </button>
+            <div id="user-profile" class="user-profile hidden">
+                <span id="user-display-name" class="user-display-name">user</span>
+                <a href="/auth/logout" class="btn btn-sm btn-outline">Logout</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-content">
+        <!-- ================= DASHBOARD VIEW ================= -->
+        <section id="dashboard-view" class="view-panel">
+            <div class="dashboard-grid">
+                <!-- Left Column: Quick Connect / Profile Editor -->
+                <div class="card form-card">
+                    <div class="card-header">
+                        <h2 id="form-title">Connection Configuration</h2>
+                        <button id="btn-reset-form" class="btn btn-sm btn-ghost hidden">New Connection</button>
+                    </div>
+
+                    <form id="rdp-config-form">
+                        <input type="hidden" id="profile-id">
+
+                        <div class="form-group">
+                            <label for="profile-name">Profile Name (Optional)</label>
+                            <input type="text" id="profile-name" placeholder="e.g. My Windows Workstation">
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group flex-2">
+                                <label for="host">Windows Host / IP <span class="required">*</span></label>
+                                <input type="text" id="host" required placeholder="192.168.1.150 or pc.local">
+                            </div>
+                            <div class="form-group flex-1">
+                                <label for="port">Port</label>
+                                <input type="number" id="port" value="3389" placeholder="3389">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group flex-1">
+                                <label for="username">Username</label>
+                                <input type="text" id="username" placeholder="Administrator">
+                            </div>
+                            <div class="form-group flex-1">
+                                <label for="domain">Domain (Optional)</label>
+                                <input type="text" id="domain" placeholder="CORP">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <div class="password-wrap">
+                                <input type="password" id="password" placeholder="••••••••">
+                                <button type="button" id="btn-toggle-password" class="btn-eye" title="Toggle visibility">👁️</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="resolution">Display Resolution</label>
+                            <select id="resolution">
+                                <option value="dynamic" selected>Dynamic Auto-Resize (Recommended)</option>
+                                <option value="1920x1080">1080p Full HD (1920x1080)</option>
+                                <option value="2560x1440">2K QHD (2560x1440)</option>
+                                <option value="3840x2160">4K Ultra HD (3840x2160)</option>
+                                <option value="1280x720">720p HD (1280x720)</option>
+                            </select>
+                        </div>
+
+                        <!-- Feature Toggles -->
+                        <div class="toggles-grid">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="enable-audio" checked>
+                                <span class="checkbox-custom"></span>
+                                <span>🔊 Audio Playback</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="enable-clipboard" checked>
+                                <span class="checkbox-custom"></span>
+                                <span>📋 Clipboard Sync</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="enable-drive" checked>
+                                <span class="checkbox-custom"></span>
+                                <span>📁 Shared Folder Drive</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="ignore-cert" checked>
+                                <span class="checkbox-custom"></span>
+                                <span>🛡️ Bypass SSL/NLA Warnings</span>
+                            </label>
+                        </div>
+
+                        <div id="connection-alert" class="alert-box hidden"></div>
+
+                        <div class="form-actions">
+                            <button type="submit" id="btn-connect" class="btn btn-primary btn-lg">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                Connect to Windows
+                            </button>
+                            <button type="button" id="btn-save-profile" class="btn btn-secondary">
+                                Save Profile
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Right Column: Saved Profiles & Diagnostics -->
+                <div class="dashboard-side">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Saved Profiles</h2>
+                            <span id="profiles-count" class="badge badge-count">0</span>
+                        </div>
+                        <div id="profiles-list" class="profiles-list">
+                            <div class="empty-state">No saved profiles yet. Configure and click "Save Profile" above.</div>
+                        </div>
+                    </div>
+
+                    <!-- Connection Logs / Console -->
+                    <div class="card logs-card">
+                        <div class="card-header logs-header" id="logs-toggle">
+                            <h2>Connection Logs & Diagnostics</h2>
+                            <span class="logs-arrow">▼</span>
+                        </div>
+                        <div id="logs-body" class="logs-body">
+                            <pre id="logs-content">No active connection logs.</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= STREAM VIEW ================= -->
+        <section id="stream-view" class="view-panel hidden">
+            <!-- Floating Stream Toolbar -->
+            <div id="stream-toolbar" class="stream-toolbar">
+                <div class="toolbar-drag-handle" title="Drag toolbar">⋮⋮</div>
+                <div class="toolbar-group">
+                    <button id="tb-btn-disconnect" class="btn btn-danger btn-sm" title="Disconnect RDP Session">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+                        Disconnect
+                    </button>
+                    <button id="tb-btn-dashboard" class="btn btn-secondary btn-sm" title="Dashboard">
+                        Dashboard
+                    </button>
+                </div>
+
+                <div class="toolbar-separator"></div>
+
+                <div class="toolbar-group">
+                    <button id="tb-btn-cad" class="btn btn-tool btn-sm" title="Send Ctrl+Alt+Del">
+                        Ctrl+Alt+Del
+                    </button>
+                    <button id="tb-btn-super" class="btn btn-tool btn-sm" title="Send Windows Key">
+                        ⊞ Win
+                    </button>
+                    <button id="tb-btn-alt-tab" class="btn btn-tool btn-sm" title="Send Alt+Tab">
+                        Alt+Tab
+                    </button>
+                </div>
+
+                <div class="toolbar-separator"></div>
+
+                <div class="toolbar-group">
+                    <button id="tb-btn-files" class="btn btn-tool btn-sm" title="Open Shared Files">
+                        📁 Files
+                    </button>
+                    <button id="tb-btn-clipboard" class="btn btn-tool btn-sm" title="Clipboard Sync">
+                        📋 Clip
+                    </button>
+                    <button id="tb-btn-fullscreen" class="btn btn-tool btn-sm" title="Toggle Fullscreen">
+                        ⛶ Fullscreen
+                    </button>
+                </div>
+            </div>
+
+            <!-- Embedded Selkies Stream Iframe -->
+            <div class="stream-container" id="stream-container">
+                <iframe id="selkies-iframe" src="/stream/" allow="camera; microphone; display-capture; clipboard-read; clipboard-write; autoplay; fullscreen"></iframe>
+            </div>
+        </section>
+    </main>
+
+    <!-- ================= SLIDE-OUT DRAWERS ================= -->
+
+    <!-- File Manager Drawer -->
+    <div id="file-drawer" class="drawer">
+        <div class="drawer-header">
+            <div>
+                <h3>📁 Shared Folder Manager</h3>
+                <p class="drawer-subtitle">Mapped in Windows as <code>\\tsclient\SharedFolder</code></p>
+            </div>
+            <button id="btn-close-files" class="btn-close">&times;</button>
+        </div>
+        <div class="drawer-body">
+            <div class="upload-dropzone" id="upload-dropzone">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <p>Drag & drop files here, or <span class="upload-browse">browse</span></p>
+                <input type="file" id="file-input" multiple class="hidden">
+            </div>
+
+            <div id="upload-progress" class="upload-progress hidden">
+                <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+                <span id="progress-text">Uploading...</span>
+            </div>
+
+            <div class="drawer-section-title">
+                <span>Files in Shared Drive</span>
+                <button id="btn-refresh-files" class="btn btn-xs btn-ghost" title="Refresh file list">↻ Refresh</button>
+            </div>
+
+            <div id="file-list-table" class="file-list-container">
+                <div class="empty-state">No files in shared folder.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clipboard Helper Drawer -->
+    <div id="clipboard-drawer" class="drawer">
+        <div class="drawer-header">
+            <div>
+                <h3>📋 Clipboard Helper</h3>
+                <p class="drawer-subtitle">Direct clipboard sync for remote Windows session</p>
+            </div>
+            <button id="btn-close-clipboard" class="btn-close">&times;</button>
+        </div>
+        <div class="drawer-body">
+            <div class="form-group">
+                <label for="clip-text">Paste or type text to send to Windows clipboard:</label>
+                <textarea id="clip-text" rows="8" placeholder="Paste text here..."></textarea>
+            </div>
+            <div class="form-actions">
+                <button id="btn-clip-send" class="btn btn-primary">Copy to Local & Remote</button>
+                <button id="btn-clip-clear" class="btn btn-ghost">Clear</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backdrop Overlay -->
+    <div id="drawer-backdrop" class="drawer-backdrop hidden"></div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>

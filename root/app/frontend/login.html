@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Selkies RDP Gateway</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="login-body">
+    <div class="login-card">
+        <div class="brand">
+            <div class="brand-logo">🪟⚡</div>
+            <h1>Selkies RDP Gateway</h1>
+            <p class="brand-subtitle">High-Performance WebRTC Windows Remote Desktop</p>
+        </div>
+
+        <div id="alert-box" class="alert-box hidden"></div>
+
+        <!-- Form for Basic Authentication -->
+        <form id="basic-login-form" class="hidden">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required autocomplete="username" placeholder="admin">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+        </form>
+
+        <!-- Button for SSO / Authentik -->
+        <div id="oidc-login-section" class="hidden">
+            <p class="sso-desc">Authenticate securely with your Single Sign-On provider.</p>
+            <a href="/auth/login/oidc" class="btn btn-sso btn-block">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                Sign in with Authentik / SSO
+            </a>
+        </div>
+
+        <div id="loading-spinner" class="spinner-container">
+            <div class="spinner"></div>
+            <p>Checking authentication configuration...</p>
+        </div>
+    </div>
+
+    <script>
+        async function initLogin() {
+            const spinner = document.getElementById('loading-spinner');
+            const basicForm = document.getElementById('basic-login-form');
+            const oidcSection = document.getElementById('oidc-login-section');
+            const alertBox = document.getElementById('alert-box');
+
+            // Check URL for error params
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('error')) {
+                alertBox.textContent = 'Authentication failed. Please try again.';
+                alertBox.classList.remove('hidden');
+                alertBox.classList.add('alert-error');
+            }
+
+            try {
+                const res = await fetch('/auth/status');
+                const data = await res.json();
+                spinner.classList.add('hidden');
+
+                if (data.authenticated) {
+                    window.location.href = '/';
+                    return;
+                }
+
+                if (data.auth_mode === 'basic') {
+                    basicForm.classList.remove('hidden');
+                } else if (data.auth_mode === 'oidc') {
+                    oidcSection.classList.remove('hidden');
+                } else if (data.auth_mode === 'forward_auth') {
+                    alertBox.textContent = 'Forward Auth required. Please access through your reverse proxy outpost.';
+                    alertBox.classList.remove('hidden');
+                } else {
+                    window.location.href = '/';
+                }
+            } catch (err) {
+                spinner.classList.add('hidden');
+                basicForm.classList.remove('hidden');
+            }
+
+            basicForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                alertBox.classList.add('hidden');
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+
+                try {
+                    const resp = await fetch('/auth/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+                    const result = await resp.json();
+                    if (resp.ok) {
+                        window.location.href = '/';
+                    } else {
+                        alertBox.textContent = result.detail || 'Invalid username or password';
+                        alertBox.classList.remove('hidden');
+                        alertBox.classList.add('alert-error');
+                    }
+                } catch (err) {
+                    alertBox.textContent = 'Network error during login';
+                    alertBox.classList.remove('hidden');
+                    alertBox.classList.add('alert-error');
+                }
+            });
+        }
+        initLogin();
+    </script>
+</body>
+</html>

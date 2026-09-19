@@ -1,0 +1,18 @@
+# Environment and credentials
+.env
+.session_secret
+
+# Persistent data directories
+config/
+shared/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+
+# OS artifacts
+.DS_Store
+Thumbs.db

@@ -1,0 +1,14 @@
+#!/command/with-contenv bash
+
+echo "[s6-init] Starting Selkies RDP WebUI & Session Manager..."
+
+export PYTHONUNBUFFERED=1
+export DISPLAY=${DISPLAY:-:1}
+export PULSE_SERVER=${PULSE_SERVER:-127.0.0.1:4713}
+export CONFIG_DIR=${CONFIG_DIR:-/config}
+export SHARED_DIR=${SHARED_DIR:-/shared}
+export FRONTEND_DIR=${FRONTEND_DIR:-/app/frontend}
+
+cd /app/backend
+
+exec /app/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --log-level info
