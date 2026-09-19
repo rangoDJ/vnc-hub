@@ -260,8 +260,9 @@ async function handleConnect(profileId = null) {
         });
         if (res.ok) {
             currentStatus = "connecting";
-            switchView(true); // Switch to stream view
-            reloadIframe();
+            const wasLoaded = isStreamLoaded();
+            switchView(true); // Switch to stream view (loads the stream if it isn't yet)
+            if (wasLoaded) reloadIframe(); // rebind an already-open stream to the new session
         } else {
             showAlert(await errorMessage(res, "Failed to initiate RDP session"), "error");
         }
@@ -274,6 +275,7 @@ async function handleDisconnect() {
     try {
         await apiFetch("/api/session/disconnect", { method: "POST" });
         switchView(false); // Return to dashboard
+        unloadStream();
     } catch (e) {
         console.error("Disconnect error", e);
     }
@@ -321,6 +323,7 @@ async function pollStatus() {
         } else {
             btnToggleView.classList.add("hidden");
             if (isStreamView) switchView(false);
+            unloadStream();
             // Explain why the session ended instead of silently returning to the dashboard
             if (data.status === "error" && (previousStatus === "connecting" || previousStatus === "connected")) {
                 showAlert(`Connection failed: ${data.last_error || "unknown error"} (see Connection Logs)`, "error");
@@ -480,6 +483,8 @@ function switchView(toStream) {
         dashboardView.classList.add("hidden");
         streamView.classList.remove("hidden");
         toggleViewText.textContent = "Back to Dashboard";
+        // Load only once visible: Selkies sizes the remote display from the iframe viewport
+        if (!isStreamLoaded()) reloadIframe();
     } else {
         if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
         streamView.classList.add("hidden");
@@ -490,6 +495,15 @@ function switchView(toStream) {
 
 function toggleView() {
     switchView(!isStreamView);
+}
+
+function isStreamLoaded() {
+    return selkiesIframe.src.includes("/stream/");
+}
+
+// Drop the Selkies client when no session is running so it can't hold a hidden, wrongly sized display
+function unloadStream() {
+    if (isStreamLoaded()) selkiesIframe.src = "about:blank";
 }
 
 function reloadIframe() {
