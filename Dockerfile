@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM ghcr.io/linuxserver/baseimage-selkies:ubuntu-noble
+FROM ghcr.io/linuxserver/baseimage-selkies:ubuntunoble
 
 LABEL maintainer="kodi"
 LABEL description="Selkies WebRTC remote desktop gateway with FreeRDP, multi-GPU encoding (NVIDIA/AMD/Intel/CPU), Authentik SSO & Basic Auth, and WebUI File Sharing."
